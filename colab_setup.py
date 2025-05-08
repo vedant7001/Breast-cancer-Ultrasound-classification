@@ -36,13 +36,24 @@ def install_packages():
     packages = [
         "torch", "torchvision", "numpy", "scikit-learn", 
         "matplotlib", "seaborn", "tqdm", "Pillow", 
-        "pytorch-grad-cam", "thop"
+        "grad-cam", "thop"
     ]
     
-    # Use subprocess to run pip install
-    cmd = [sys.executable, "-m", "pip", "install", "-q"] + packages
-    print(f"Running: {' '.join(cmd)}")
-    subprocess.run(cmd, check=True)
+    # Try to install packages one by one to avoid failure if one package fails
+    for package in packages:
+        try:
+            print(f"Installing {package}...")
+            cmd = [sys.executable, "-m", "pip", "install", "-q", package]
+            subprocess.run(cmd, check=False)  # Using check=False to continue even if a package fails
+        except Exception as e:
+            print(f"Warning: Failed to install {package}: {e}")
+            
+    # Try alternative package name for grad-cam if the first one failed
+    try:
+        print("Trying alternative package name for grad-cam...")
+        subprocess.run([sys.executable, "-m", "pip", "install", "-q", "pytorch_grad_cam"], check=False)
+    except Exception as e:
+        print(f"Warning: Failed to install pytorch_grad_cam: {e}")
 
 def setup_colab():
     """Setup the Colab environment for the project."""
