@@ -5,55 +5,96 @@ Run this script at the beginning of your Colab notebook.
 
 import os
 import json
-import urllib.request
-import zipfile
 import sys
 import subprocess
+import shutil
 
-def clone_repository():
-    """Clone the GitHub repository if not already cloned."""
+def clean_repository_setup():
+    """Clean up any existing repository and set up properly."""
     repo_url = "https://github.com/vedant7001/Breast-cancer-Ultrasound-classification.git"
     repo_dir = "Breast-cancer-Ultrasound-classification"
     
+    # Check if we're already in a repository directory
+    current_path = os.getcwd()
+    path_parts = current_path.split(os.sep)
+    
+    # Count how many times the repo name appears in the path
+    repo_count = path_parts.count(repo_dir)
+    
+    if repo_count > 0:
+        print(f"Detected nested repository directories ({repo_count} levels deep)")
+        
+        # Go back to /content directory
+        if "/content" in current_path:
+            print("Moving back to /content directory...")
+            os.chdir("/content")
+            
+            # Remove existing repository folders
+            if os.path.exists(repo_dir):
+                print(f"Removing existing repository at {repo_dir}...")
+                try:
+                    shutil.rmtree(repo_dir)
+                except Exception as e:
+                    print(f"Warning: Failed to remove directory: {e}")
+    
+    # Clone the repository fresh
     if not os.path.exists(repo_dir):
         print(f"Cloning repository from {repo_url}...")
-        # Using subprocess instead of ! magic
         subprocess.run(["git", "clone", repo_url], check=True)
-        # Change directory
-        os.chdir(repo_dir)
-    else:
-        print(f"Repository already exists at {repo_dir}")
-        # Change directory
-        os.chdir(repo_dir)
-        # Pull the latest changes
-        subprocess.run(["git", "pull"], check=True)
     
+    # Change to repository directory
+    os.chdir(repo_dir)
     print(f"Working directory: {os.getcwd()}")
 
 def install_packages():
     """Install required packages."""
     print("\nInstalling required packages...")
+    
+    # First, upgrade pip
+    try:
+        subprocess.run([sys.executable, "-m", "pip", "install", "--upgrade", "pip"], check=False)
+    except Exception as e:
+        print(f"Warning: Failed to upgrade pip: {e}")
+    
+    # Install packages individually
     packages = [
-        "torch", "torchvision", "numpy", "scikit-learn", 
-        "matplotlib", "seaborn", "tqdm", "Pillow", 
-        "grad-cam", "thop"
+        "torch", 
+        "torchvision", 
+        "numpy", 
+        "scikit-learn", 
+        "matplotlib", 
+        "seaborn", 
+        "tqdm", 
+        "Pillow", 
+        "thop"
     ]
     
-    # Try to install packages one by one to avoid failure if one package fails
     for package in packages:
         try:
             print(f"Installing {package}...")
-            cmd = [sys.executable, "-m", "pip", "install", "-q", package]
-            subprocess.run(cmd, check=False)  # Using check=False to continue even if a package fails
+            subprocess.run([sys.executable, "-m", "pip", "install", "-q", package], check=False)
         except Exception as e:
             print(f"Warning: Failed to install {package}: {e}")
-            
-    # Try alternative package name for grad-cam if the first one failed
-    try:
-        print("Trying alternative package name for grad-cam...")
-        subprocess.run([sys.executable, "-m", "pip", "install", "-q", "pytorch_grad_cam"], check=False)
-    except Exception as e:
-        print(f"Warning: Failed to install pytorch_grad_cam: {e}")
+    
+    # Try multiple versions of grad-cam
+    grad_cam_options = ["pytorch-grad-cam", "grad-cam", "pytorch_grad_cam"]
+    grad_cam_installed = False
+    
+    for option in grad_cam_options:
+        try:
+            print(f"Trying to install {option}...")
+            result = subprocess.run([sys.executable, "-m", "pip", "install", "-q", option], check=False)
+            if result.returncode == 0:
+                print(f"Successfully installed {option}")
+                grad_cam_installed = True
+                break
+        except Exception as e:
+            print(f"Warning: Failed to install {option}: {e}")
+    
+    if not grad_cam_installed:
+        print("WARNING: Could not install any version of grad-cam.")
+        print("Manual installation of pytorch-grad-cam from source may be required.")
+        print("You can try running: !pip install git+https://github.com/jacobgil/pytorch-grad-cam.git")
 
 def setup_colab():
     """Setup the Colab environment for the project."""
@@ -84,26 +125,26 @@ def setup_colab():
             config = json.load(f)
         
         # Update paths for Colab
-        config['data']['data_dir'] = '/content/data/BUSI'
-        config['output_dir'] = '/content/experiments'
+        config['data']['data_dir'] = '/content/Breast-cancer-Ultrasound-classification/data/BUSI'
+        config['output_dir'] = '/content/Breast-cancer-Ultrasound-classification/experiments'
         
         # Update sample images paths if they exist
         if 'sample_images' in config:
             for i in range(len(config['sample_images'])):
-                config['sample_images'][i] = os.path.join('/content', config['sample_images'][i])
+                config['sample_images'][i] = os.path.join('/content/Breast-cancer-Ultrasound-classification', 
+                                                        config['sample_images'][i])
         
         with open('config.json', 'w') as f:
             json.dump(config, f, indent=4)
         print("Configuration updated for Colab paths")
     
-    # Add option to download the BUSI dataset
+    # Instructions for downloading BUSI dataset
     print("\nTo download the BUSI dataset:")
     print("1. Go to https://www.kaggle.com/datasets/aryashah2k/breast-ultrasound-images-dataset")
     print("2. Download the dataset")
     print("3. Upload it to your Colab session using the file browser")
     print("4. Extract it to the data/BUSI directory")
     
-    # Instead of using input() which can block in Colab
     print("\nSetup complete! You can now run the breast ultrasound classification project in Colab.")
     
     # Check GPU availability
@@ -115,8 +156,8 @@ def setup_colab():
 
 def main():
     """Main function to set up the Colab environment."""
-    # Clone the repository
-    clone_repository()
+    # Clean repository setup
+    clean_repository_setup()
     
     # Set up the Colab environment
     setup_colab()
