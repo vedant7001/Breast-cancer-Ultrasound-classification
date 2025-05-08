@@ -50,6 +50,8 @@ This project implements deep learning models for breast ultrasound image classif
 │   ├── __init__.py           # Package initialization
 │   ├── metrics.py            # Metrics calculation
 │   └── grad_cam.py           # Grad-CAM implementation
+├── colab_setup.py            # Google Colab setup script
+├── breast_ultrasound_classification.ipynb  # Colab notebook
 ├── data/                     # Data directory
 │   ├── BUSI/                 # BUSI dataset (if used)
 │   └── mini-MIAS/            # mini-MIAS dataset (if used)
@@ -121,6 +123,60 @@ python evaluate.py --model_path checkpoints/densenet_densenet121_best.pt --model
 python visualize.py --experiment_dir experiments/breast_ultrasound_classification --models densenet_densenet121 resnet_resnet50 efficientnet_efficientnet_b0
 ```
 
+## Google Colab Usage
+
+This project supports running on Google Colab for easy access to GPU resources. You can use the provided notebook or follow these steps:
+
+1. Open the `breast_ultrasound_classification.ipynb` notebook in Google Colab:
+   - Go to [Google Colab](https://colab.research.google.com/)
+   - Upload the notebook from this repository or open it directly from GitHub
+
+2. Alternatively, create a new notebook and run:
+   ```python
+   # Clone repository
+   !git clone https://github.com/vedant7001/Breast-cancer-Ultrasound-classification.git
+   %cd Breast-cancer-Ultrasound-classification
+
+   # Execute setup script
+   !python colab_setup.py
+   ```
+
+3. The `colab_setup.py` script will:
+   - Install all required dependencies
+   - Create necessary directories
+   - Update configuration for the Colab environment
+
+4. Download the BUSI dataset using Kaggle API:
+   ```python
+   # Install Kaggle API
+   !pip install -q kaggle
+   
+   # Upload your Kaggle API token
+   from google.colab import files
+   print("Upload your kaggle.json file (from your Kaggle account settings)")
+   uploaded = files.upload()
+   
+   # Set up Kaggle credentials
+   !mkdir -p ~/.kaggle
+   !cp kaggle.json ~/.kaggle/
+   !chmod 600 ~/.kaggle/kaggle.json
+   
+   # Download and extract dataset
+   !kaggle datasets download -d aryashah2k/breast-ultrasound-images-dataset
+   !unzip -q breast-ultrasound-images-dataset.zip -d data/BUSI
+   ```
+
+5. Run training and evaluation:
+   ```python
+   # Train models
+   !python main.py --config config.json
+   
+   # Evaluate models
+   !python evaluate.py --model_path checkpoints/densenet_densenet121_best.pt --model_name densenet --variant densenet121 --data_dir data/BUSI --num_classes 3
+   ```
+
+6. For more detailed usage, refer to the `breast_ultrasound_classification.ipynb` notebook provided in the repository.
+
 ## Configuration
 
 The `config.json` file specifies the experiment parameters:
@@ -168,6 +224,25 @@ The `config.json` file specifies the experiment parameters:
     ]
 }
 ```
+
+## Troubleshooting
+
+### Common Issues in Google Colab
+
+1. **Package Installation Problems**:
+   - If `pytorch-grad-cam` fails to install, try: `!pip install git+https://github.com/jacobgil/pytorch-grad-cam.git`
+   - For other packages, install them individually: `!pip install package-name`
+
+2. **Dataset Directory Issues**:
+   - Ensure the data directories exist: `!mkdir -p data/BUSI`
+   - Check the extracted dataset structure: `!ls -la data/BUSI`
+
+3. **GPU Not Available**:
+   - In Colab, go to Runtime → Change runtime type → Hardware accelerator → GPU
+
+4. **Memory Issues**:
+   - Reduce batch size in `config.json`
+   - Use a smaller model variant (e.g., EfficientNetB0 instead of larger variants)
 
 ## Results
 

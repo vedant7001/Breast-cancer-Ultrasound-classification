@@ -91,10 +91,101 @@ def install_packages():
         except Exception as e:
             print(f"Warning: Failed to install {option}: {e}")
     
+    # If standard methods fail, try installing from GitHub source
+    if not grad_cam_installed:
+        try:
+            print("Installing pytorch-grad-cam from GitHub source...")
+            result = subprocess.run(
+                [sys.executable, "-m", "pip", "install", "git+https://github.com/jacobgil/pytorch-grad-cam.git"],
+                check=False
+            )
+            if result.returncode == 0:
+                print("Successfully installed pytorch-grad-cam from source")
+                grad_cam_installed = True
+        except Exception as e:
+            print(f"Warning: Failed to install pytorch-grad-cam from source: {e}")
+    
     if not grad_cam_installed:
         print("WARNING: Could not install any version of grad-cam.")
-        print("Manual installation of pytorch-grad-cam from source may be required.")
-        print("You can try running: !pip install git+https://github.com/jacobgil/pytorch-grad-cam.git")
+        print("You may need to manually install it later if needed for visualization.")
+
+def create_project_directories():
+    """Create necessary project directories."""
+    print("\nCreating project directories...")
+    
+    # Define directories to create
+    directories = [
+        'data',
+        'data/BUSI',
+        'checkpoints',
+        'results',
+        'experiments'
+    ]
+    
+    # Create each directory and verify creation
+    for directory in directories:
+        try:
+            os.makedirs(directory, exist_ok=True)
+            if os.path.exists(directory):
+                print(f"✓ Successfully created directory: {directory}")
+            else:
+                print(f"✗ Failed to create directory: {directory}")
+        except Exception as e:
+            print(f"Error creating directory {directory}: {e}")
+    
+    # Additional confirmation for the most important directory
+    if os.path.exists('data/BUSI'):
+        print("\n✓ CONFIRMED: data/BUSI directory is ready for dataset extraction")
+    else:
+        print("\n✗ ERROR: Failed to create data/BUSI directory. Please create it manually before extraction.")
+        # Try an alternative method to create the directory
+        try:
+            subprocess.run(["mkdir", "-p", "data/BUSI"], check=False)
+            print("Attempted alternative directory creation method.")
+        except Exception:
+            pass
+
+def update_config_for_colab():
+    """Update config.json paths for Google Colab environment."""
+    print("\nUpdating configuration for Colab...")
+    if os.path.exists('config.json'):
+        with open('config.json', 'r') as f:
+            config = json.load(f)
+        
+        # Update paths for Colab
+        config['data']['data_dir'] = '/content/Breast-cancer-Ultrasound-classification/data/BUSI'
+        config['output_dir'] = '/content/Breast-cancer-Ultrasound-classification/experiments'
+        
+        # Update sample images paths
+        if 'sample_images' in config:
+            for i in range(len(config['sample_images'])):
+                config['sample_images'][i] = os.path.join('/content/Breast-cancer-Ultrasound-classification', 
+                                                        config['sample_images'][i])
+        
+        with open('config.json', 'w') as f:
+            json.dump(config, f, indent=4)
+        print("Configuration updated for Colab")
+
+def check_gpu_availability():
+    """Check and print GPU availability information."""
+    print("\nChecking GPU availability...")
+    try:
+        import torch
+        if torch.cuda.is_available():
+            device_name = torch.cuda.get_device_name(0)
+            print(f"✓ GPU is available: {device_name}")
+            # Try to get more GPU info using nvidia-smi
+            try:
+                result = subprocess.run(["nvidia-smi"], capture_output=True, text=True, check=False)
+                if result.returncode == 0:
+                    print("\nGPU Details:")
+                    print(result.stdout)
+            except:
+                pass  # If nvidia-smi fails, just continue
+        else:
+            print("✗ GPU is not available. Training will be slower on CPU.")
+    except ImportError:
+        print("Could not import torch. GPU check skipped.")
 
 def setup_colab():
     """Setup the Colab environment for the project."""
@@ -108,59 +199,31 @@ def setup_colab():
         print("Not running in Google Colab")
         return
     
+    # Clean up and clone repository
+    clean_repository_setup()
+    
     # Install required packages
     install_packages()
     
     # Create project directories
-    print("\nCreating project directories...")
-    os.makedirs('data/BUSI', exist_ok=True)
-    os.makedirs('checkpoints', exist_ok=True)
-    os.makedirs('results', exist_ok=True)
-    os.makedirs('experiments', exist_ok=True)
+    create_project_directories()
     
     # Update config.json for Colab paths
-    print("\nUpdating configuration for Colab...")
-    if os.path.exists('config.json'):
-        with open('config.json', 'r') as f:
-            config = json.load(f)
-        
-        # Update paths for Colab
-        config['data']['data_dir'] = '/content/Breast-cancer-Ultrasound-classification/data/BUSI'
-        config['output_dir'] = '/content/Breast-cancer-Ultrasound-classification/experiments'
-        
-        # Update sample images paths if they exist
-        if 'sample_images' in config:
-            for i in range(len(config['sample_images'])):
-                config['sample_images'][i] = os.path.join('/content/Breast-cancer-Ultrasound-classification', 
-                                                        config['sample_images'][i])
-        
-        with open('config.json', 'w') as f:
-            json.dump(config, f, indent=4)
-        print("Configuration updated for Colab paths")
-    
-    # Instructions for downloading BUSI dataset
-    print("\nTo download the BUSI dataset:")
-    print("1. Go to https://www.kaggle.com/datasets/aryashah2k/breast-ultrasound-images-dataset")
-    print("2. Download the dataset")
-    print("3. Upload it to your Colab session using the file browser")
-    print("4. Extract it to the data/BUSI directory")
-    
-    print("\nSetup complete! You can now run the breast ultrasound classification project in Colab.")
+    update_config_for_colab()
     
     # Check GPU availability
-    import torch
-    if torch.cuda.is_available():
-        print(f"\nGPU is available: {torch.cuda.get_device_name(0)}")
-    else:
-        print("\nGPU is not available. Training will be slower.")
-
-def main():
-    """Main function to set up the Colab environment."""
-    # Clean repository setup
-    clean_repository_setup()
+    check_gpu_availability()
     
-    # Set up the Colab environment
-    setup_colab()
+    # Print dataset instructions
+    print("\n" + "="*50)
+    print("DATASET INSTRUCTIONS")
+    print("="*50)
+    print("To download the BUSI dataset:")
+    print("1. Run the dataset_utils.py script:")
+    print("   !python dataset_utils.py")
+    print("2. OR use the notebook cell dedicated to dataset download")
+    print("3. The script will guide you through downloading from Kaggle")
+    print("\nSetup complete! You can now run the breast ultrasound classification project in Colab.")
 
 if __name__ == "__main__":
-    main() 
+    setup_colab() 
