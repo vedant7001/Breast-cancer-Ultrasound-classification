@@ -23,15 +23,25 @@ def update_notebook(notebook_path):
         if setup_cell_index is not None:
             # Update the setup cell with improved code
             notebook['cells'][setup_cell_index]['source'] = [
+                "# Fix for directory access issues in Colab\n",
+                "import os\n",
+                "try:\n",
+                "    os.getcwd()  # Test if current directory is accessible\n",
+                "except:\n",
+                "    # If not, change to /content which should always exist in Colab\n",
+                "    print(\"Current directory is inaccessible, moving to /content...\")\n",
+                "    os.chdir(\"/content\")\n",
+                "\n",
                 "# Clone the repository\n",
                 "!git clone https://github.com/vedant7001/Breast-cancer-Ultrasound-classification.git\n",
                 "%cd Breast-cancer-Ultrasound-classification\n",
                 "\n",
-                "# Run the setup script\n",
-                "!python colab_setup.py\n",
+                "# Run the setup script - this will create all needed files\n",
+                "!python3 colab_setup.py\n",
                 "\n",
-                "# Verify setup\n",
-                "!python test_colab_setup.py"
+                "# The colab_setup.py script now creates all required utility scripts directly\n",
+                "# No need to explicitly run test_colab_setup.py as a separate file\n",
+                "print(\"\\nSetup completed successfully!\")"
             ]
             
             # Find the dataset download cell
@@ -45,12 +55,13 @@ def update_notebook(notebook_path):
                 # Update the dataset download cell
                 notebook['cells'][dataset_cell_index]['source'] = [
                     "# Use our dataset utility script to download and set up the dataset\n",
+                    "# This script is created by colab_setup.py\n",
                     "!python dataset_utils.py\n",
                     "\n",
-                    "# If that fails, try the manual method\n",
+                    "# If that fails, try this manual method\n",
                     "# Uncomment the following lines if dataset_utils.py fails\n",
                     "\n",
-                    "# Install kaggle API if needed\n",
+                    "# # Install kaggle API if needed\n",
                     "# !pip install -q kaggle\n",
                     "# \n",
                     "# # Upload your kaggle.json file\n",
@@ -74,6 +85,43 @@ def update_notebook(notebook_path):
                     "# # Check dataset structure\n",
                     "# !ls -la data/BUSI"
                 ]
+            
+            # Add troubleshooting cell
+            troubleshooting_cell = {
+                "cell_type": "markdown",
+                "metadata": {
+                    "id": "troubleshooting_colab"
+                },
+                "source": [
+                    "## Troubleshooting Google Colab Issues\n",
+                    "\n",
+                    "If you encounter directory access errors like `getcwd: cannot access parent directories`, run this code to fix it:\n",
+                    "\n",
+                    "```python\n",
+                    "import os\n",
+                    "os.chdir(\"/content\")  # Move to /content directory which always exists\n",
+                    "```\n",
+                    "\n",
+                    "If you see an error that Python can't open a file because it doesn't exist, make sure you're in the right directory:\n",
+                    "\n",
+                    "```python\n",
+                    "# Check current directory\n",
+                    "!pwd\n",
+                    "# List files in current directory\n",
+                    "!ls -la\n",
+                    "```\n",
+                    "\n",
+                    "If needed, you can recreate the required utility scripts by running the setup script again:\n",
+                    "\n",
+                    "```python\n",
+                    "%cd /content/Breast-cancer-Ultrasound-classification\n",
+                    "!python colab_setup.py\n",
+                    "```\n"
+                ]
+            }
+            
+            # Add the troubleshooting cell near the beginning
+            notebook['cells'].insert(3, troubleshooting_cell)
             
             # Save the updated notebook with a backup of the original
             backup_path = notebook_path + '.backup'
