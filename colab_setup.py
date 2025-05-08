@@ -8,6 +8,41 @@ import json
 import urllib.request
 import zipfile
 import sys
+import subprocess
+
+def clone_repository():
+    """Clone the GitHub repository if not already cloned."""
+    repo_url = "https://github.com/vedant7001/Breast-cancer-Ultrasound-classification.git"
+    repo_dir = "Breast-cancer-Ultrasound-classification"
+    
+    if not os.path.exists(repo_dir):
+        print(f"Cloning repository from {repo_url}...")
+        # Using subprocess instead of ! magic
+        subprocess.run(["git", "clone", repo_url], check=True)
+        # Change directory
+        os.chdir(repo_dir)
+    else:
+        print(f"Repository already exists at {repo_dir}")
+        # Change directory
+        os.chdir(repo_dir)
+        # Pull the latest changes
+        subprocess.run(["git", "pull"], check=True)
+    
+    print(f"Working directory: {os.getcwd()}")
+
+def install_packages():
+    """Install required packages."""
+    print("\nInstalling required packages...")
+    packages = [
+        "torch", "torchvision", "numpy", "scikit-learn", 
+        "matplotlib", "seaborn", "tqdm", "Pillow", 
+        "pytorch-grad-cam", "thop"
+    ]
+    
+    # Use subprocess to run pip install
+    cmd = [sys.executable, "-m", "pip", "install", "-q"] + packages
+    print(f"Running: {' '.join(cmd)}")
+    subprocess.run(cmd, check=True)
 
 def setup_colab():
     """Setup the Colab environment for the project."""
@@ -22,8 +57,7 @@ def setup_colab():
         return
     
     # Install required packages
-    print("\nInstalling required packages...")
-    !pip install -q torch torchvision numpy scikit-learn matplotlib seaborn tqdm Pillow pytorch-grad-cam thop
+    install_packages()
     
     # Create project directories
     print("\nCreating project directories...")
@@ -52,24 +86,13 @@ def setup_colab():
         print("Configuration updated for Colab paths")
     
     # Add option to download the BUSI dataset
-    download_dataset = input("\nDownload BUSI dataset? (y/n): ")
-    if download_dataset.lower() == 'y':
-        print("\nDownloading BUSI dataset...")
-        # Note: You would need to provide the actual download link for the dataset
-        # This is just a placeholder - replace with actual dataset link
-        dataset_url = "https://kaggle.com/datasets/aryashah2k/breast-ultrasound-images-dataset/download"
-        
-        try:
-            # For Kaggle datasets, you would typically need to log in and use the Kaggle API
-            # Here's a simplified approach:
-            print("Please use this alternative method to download the BUSI dataset:")
-            print("1. Go to https://www.kaggle.com/datasets/aryashah2k/breast-ultrasound-images-dataset")
-            print("2. Download the dataset")
-            print("3. Upload it to your Colab session using the file browser")
-            print("4. Extract it to the data/BUSI directory")
-        except Exception as e:
-            print(f"Error downloading dataset: {e}")
+    print("\nTo download the BUSI dataset:")
+    print("1. Go to https://www.kaggle.com/datasets/aryashah2k/breast-ultrasound-images-dataset")
+    print("2. Download the dataset")
+    print("3. Upload it to your Colab session using the file browser")
+    print("4. Extract it to the data/BUSI directory")
     
+    # Instead of using input() which can block in Colab
     print("\nSetup complete! You can now run the breast ultrasound classification project in Colab.")
     
     # Check GPU availability
@@ -79,5 +102,13 @@ def setup_colab():
     else:
         print("\nGPU is not available. Training will be slower.")
 
+def main():
+    """Main function to set up the Colab environment."""
+    # Clone the repository
+    clone_repository()
+    
+    # Set up the Colab environment
+    setup_colab()
+
 if __name__ == "__main__":
-    setup_colab() 
+    main() 
